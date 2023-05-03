@@ -7,7 +7,7 @@ map_ptx_to_jl_frag = Dict(
                             "s32" => Int32(42),
                             "f16" => ntuple(i -> VecElement{Float16}(42), 2),
                             "f32" => Float32(42)
-                            )  
+                            )
 # Return specific matrix shape given operation configuration
 function get_array_shape(mat, mnk, layout)
     if !(mat in ["a","b","c","d"])
@@ -46,13 +46,13 @@ end
             # Type-dependent variables
             array_ty = CUDA.WMMA.map_ptx_to_jl_array[elem_type]
             expected = map_ptx_to_jl_frag[elem_type]
-            
+
             # Address-space dependent variables
             do_shared_test = (addr_space == "_shared")
 
             # Get the function name
             func = Symbol("llvm_wmma_load_$(mat)_$(layout)_$(shape)$(addr_space)_stride_$(elem_type)")
-            
+
             input_shape = get_array_shape(mat, mnk, layout)
             input       = array_ty(42) * ones(array_ty, input_shape)
             input_dev   = CuArray(input)
@@ -96,7 +96,7 @@ end
             elem_type in ops[3],
             addr_space in ["", "_global", "_shared"],
             stride in ["stride"]
-            
+
             # Skip all but d matrices
             if mat != "d"
                 continue
@@ -171,7 +171,7 @@ end
             # Int/subint mma functions are distinguished by the a/b element type
             mma_sym = d_ty == Int32 ? Symbol("llvm_wmma_mma_$(a_layout)_$(b_layout)_$(shape)_$(ab_elem_type)") :
                                       Symbol("llvm_wmma_mma_$(a_layout)_$(b_layout)_$(shape)_$(d_elem_type)_$(c_elem_type)")
-            mma_func = getfield(Main, mma_sym)               
+            mma_func = getfield(Main, mma_sym)
             std_func = getfield(Main, Symbol("llvm_wmma_store_d_col_$(shape)_global_stride_$(d_elem_type)"))
 
             a_shape   = get_array_shape("a", mnk, a_layout)
@@ -207,7 +207,7 @@ end
             # Alter test depending on a/b element Type
             if ab_ty == Float16
                 @test new_a * new_b + c ≈ Array(d_dev) rtol=Base.rtoldefault(Float16)
-            else # Cast a and b to prevent UInt8 rollover of resultant data            
+            else # Cast a and b to prevent UInt8 rollover of resultant data
                 @test Int32.(new_a) * Int32.(new_b) + c == Array(d_dev)
             end
         end
@@ -322,7 +322,7 @@ end
             return
         end
 
-        ptx = sprint(io -> CUDA.code_ptx(io, kernel, (CuDeviceArray{Float32,1,CUDA.AS.Global},)))
+        ptx = sprint(io -> CUDA.code_ptx(io, kernel, (CuDeviceArray{Float32,1,CUDA.AS.Global,Int32},)))
 
         @test !occursin(r"wmma.store.d.sync(.aligned)?.col.m16n16k16.f32", ptx)
         @test  occursin(r"wmma.store.d.sync(.aligned)?.col.m16n16k16.global.f32", ptx)
